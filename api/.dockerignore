@@ -1,0 +1,5 @@
+.env
+*.md
+k8s
+build.sh
+**/*_test.go

@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubby-manatee-web
+  namespace: moocat
+data:
+  API_BASE_URL: http://kubby-manatee-api.moocat.svc.cluster.local:8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubby-manatee-web
+  namespace: moocat
+  labels:
+    app: kubby-manatee-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubby-manatee-web
+  template:
+    metadata:
+      labels:
+        app: kubby-manatee-web
+    spec:
+      containers:
+        - name: web
+          image: kubby-manatee-web:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: kubby-manatee-web
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubby-manatee-web
+  namespace: moocat
+spec:
+  type: LoadBalancer
+  selector:
+    app: kubby-manatee-web
+  ports:
+    - port: 80
+      targetPort: 8080

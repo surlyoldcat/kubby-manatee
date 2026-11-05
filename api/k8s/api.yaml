@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubby-manatee-api
+  namespace: moocat
+data:
+  DB_HOST: postgres-postgresql.moocat.svc.cluster.local
+  DB_PORT: "5432"
+  DB_DATABASE: movielens
+  DB_SSLMODE: disable
+  PORT: "8083"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubby-manatee-api
+  namespace: moocat
+  labels:
+    app: kubby-manatee-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubby-manatee-api
+  template:
+    metadata:
+      labels:
+        app: kubby-manatee-api
+    spec:
+      containers:
+        - name: api
+          image: kubby-manatee-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          envFrom:
+            - configMapRef:
+                name: kubby-manatee-api
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-db-creds
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-db-creds
+                  key: password
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8083
+            periodSeconds: 5
+            failureThreshold: 14
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8083
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8083
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubby-manatee-api
+  namespace: moocat
+spec:
+  type: NodePort
+  selector:
+    app: kubby-manatee-api
+  ports:
+    - port: 8083
+      targetPort: 8083

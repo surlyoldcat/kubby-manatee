@@ -1,0 +1,112 @@
+openapi: 3.0.3
+info:
+  title: Kubby Manatee Backend API
+  version: 0.1.0
+  description: Read-only REST API over the MovieLens dataset.
+servers:
+  - url: http://localhost:8083
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /movies:
+    get:
+      summary: List movies (paginated, 50 per page)
+      operationId: listMovies
+      parameters:
+        - name: pagenum
+          in: query
+          description: 1-based page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        "200":
+          description: A page of movies, ordered by movie_id
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [pagenum, movies]
+                properties:
+                  pagenum:
+                    type: integer
+                  movies:
+                    type: array
+                    maxItems: 50
+                    items:
+                      $ref: "#/components/schemas/MovieListItem"
+        "400":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+  /movies/{id}:
+    get:
+      summary: Get a movie by ID
+      operationId: getMovie
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The movie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/movies"
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+components:
+  schemas:
+    movies:
+      type: object
+      required: [movie_id, title, genres]
+      properties:
+        movie_id:
+          type: integer
+        title:
+          type: string
+        genres:
+          type: string
+          description: Pipe-delimited, e.g. Adventure|Animation
+    MovieListItem:
+      type: object
+      required: [movie_id, title]
+      properties:
+        movie_id:
+          type: integer
+        title:
+          type: string
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
